@@ -31,49 +31,19 @@ using namespace cv;
 using namespace cv::ml;
 using namespace std;
 
-bool file_exists(const string &file);
-void load_images(string directory, vector<Mat>& image_list);
 vector<string> files_in_directory(string directory);
 
 void get_svm_detector(const Ptr<SVM>& svm, vector< float > & hog_detector);
 void convert_to_ml(const std::vector< cv::Mat > & train_samples, cv::Mat& trainData);
 void sample_neg(const vector< Mat > & full_neg_lst, vector< Mat > & neg_lst, const Size & size);
 Mat get_hogdescriptor_visu(const Mat& color_origImg, vector<float>& descriptorValues, const Size & size);
-void compute_hog(const vector< Mat > & img_lst, vector< Mat > & gradient_lst, const Size & size);
-void train_svm(const vector< Mat > & gradient_lst, const vector< int > & labels);
 void draw_locations(Mat & img, const vector< Rect > & locations, const Scalar & color);
 void test_it(const Size & size);
 
 int main(int argc, char** argv)
 {
-    if (!file_exists(TRAINED_SVM)) {
-        
-        vector< Mat > pos_lst;
-        vector< Mat > full_neg_lst;
-        vector< Mat > neg_lst;
-        vector< Mat > gradient_lst;
-        vector< int > labels;
-        
-        load_images(POSITIVE_TRAINING_SET_PATH, pos_lst);
-        labels.assign(pos_lst.size(), +1);
-        
-        load_images(NEGATIVE_TRAINING_SET_PATH, full_neg_lst);
-        labels.insert(labels.end(), full_neg_lst.size(), -1);
-        
-        compute_hog(pos_lst, gradient_lst, IMAGE_SIZE);
-        compute_hog(full_neg_lst, gradient_lst, IMAGE_SIZE);
-        
-        train_svm(gradient_lst, labels);
-    }
-    
     test_it(IMAGE_SIZE);
     return 0;
-}
-
-bool file_exists(const string &file)
-{
-    return true;
-//    access(file.c_str(), 0) == 0;
 }
 
 vector<string> files_in_directory(string directory)
@@ -112,26 +82,6 @@ vector<string> files_in_directory(string directory)
 #endif
     
     return files;
-}
-
-void load_images(string directory, vector<Mat>& image_list) {
-    
-    Mat img;
-    vector<string> files;
-    files = files_in_directory(directory);
-    
-    for (int i = 0; i < files.size(); ++i) {
-        
-        img = imread(files.at(i));
-        if (img.empty())
-            continue;
-#ifdef _DEBUG
-        imshow("image", img);
-        waitKey(10);
-#endif
-        resize(img, img, IMAGE_SIZE);
-        image_list.push_back(img.clone());
-    }
 }
 
 void get_svm_detector(const Ptr<SVM>& svm, vector< float > & hog_detector)
@@ -369,52 +319,6 @@ Mat get_hogdescriptor_visu(const Mat& color_origImg, vector<float>& descriptorVa
     
 } // get_hogdescriptor_visu
 
-void compute_hog(const vector< Mat > & img_lst, vector< Mat > & gradient_lst, const Size & size)
-{
-    HOGDescriptor hog;
-    hog.winSize = size;
-    Mat gray;
-    vector< Point > location;
-    vector< float > descriptors;
-    
-    vector< Mat >::const_iterator img = img_lst.begin();
-    vector< Mat >::const_iterator end = img_lst.end();
-    for (; img != end; ++img)
-    {
-        cvtColor(*img, gray, COLOR_BGR2GRAY);
-        hog.compute(gray, descriptors, Size(8, 8), Size(0, 0), location);
-        gradient_lst.push_back(Mat(descriptors).clone());
-#ifdef _DEBUG
-        imshow("gradient", get_hogdescriptor_visu(img->clone(), descriptors, size));
-        waitKey(10);
-#endif
-    }
-}
-
-void train_svm(const vector< Mat > & gradient_lst, const vector< int > & labels)
-{
-    /* Default values to train SVM */
-    Ptr<SVM> svm = SVM::create();
-    svm->setCoef0(0.0);
-    svm->setDegree(3);
-    svm->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 100, 1e-3));
-    svm->setGamma(0);
-    svm->setKernel(SVM::LINEAR);
-    svm->setNu(0.5);
-    svm->setP(0.1); // for EPSILON_SVR, epsilon in loss function?
-    svm->setC(0.01); // From paper, soft classifier
-    svm->setType(SVM::EPS_SVR); // C_SVC; // EPSILON_SVR; // may be also NU_SVR; // do regression task
-    
-    Mat train_data;
-    convert_to_ml(gradient_lst, train_data);
-    
-    clog << "Start training...";
-    svm->train(train_data, ROW_SAMPLE, Mat(labels));
-    clog << "...[done]" << endl;
-    
-    svm->save(TRAINED_SVM);
-}
-
 void draw_locations(Mat & img, const vector< Rect > & locations, const Scalar & color)
 {
     if (!locations.empty())
@@ -433,8 +337,11 @@ void test_it(const Size & size)
     char key = 27;
     Mat img, draw;
     Ptr<SVM> svm;
+    
+    //TO DO : READ
     HOGDescriptor hog;
     hog.winSize = size;
+    
     VideoCapture video;
     vector< Rect > locations;
     
@@ -482,7 +389,11 @@ void test_it(const Size & size)
             // Center point of the vehicle
             Point center(r.x + r.width / 2, r.y + r.height / 2);
             
-            if (abs(center.y - img.rows * 2 / 3) < 2) {
+            //to draw center of rectangle
+            line(draw, center,center, Scalar(255,0,0),5);
+
+            
+            if (abs(center.y - img.rows * 2 / 3) == 0) {
                 ++num_of_vehicles;
                 line(draw, Point(0, img.rows * 2 / 3), Point(img.cols / 2, img.rows * 2 / 3), Scalar(0, 255, 0), 3);
                 imshow(WINDOW_NAME, draw);
@@ -493,7 +404,7 @@ void test_it(const Size & size)
             
         }
         
-        //putText(draw, "Detected vehicles: " + to_string(num_of_vehicles), Point(50, 50), 1, 1, Scalar(0, 0, 255), 2);
+        putText(draw, "Detected vehicles: " + to_string(num_of_vehicles), Point(50, 50), 1, 1, Scalar(0, 0, 255), 2);
         
         imshow(WINDOW_NAME, draw);
         key = (char)waitKey(10);
