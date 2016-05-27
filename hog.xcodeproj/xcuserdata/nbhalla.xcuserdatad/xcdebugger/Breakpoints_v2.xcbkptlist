@@ -6,16 +6,32 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            shouldBeEnabled = "No"
+            shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "hog/main.cpp"
-            timestampString = "485706704.222333"
+            timestampString = "486056502.453337"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "394"
-            endingLineNumber = "394"
-            landmarkName = "train_svm(const vector&lt; Mat &gt; &amp; gradient_lst, const vector&lt; int &gt; &amp; labels)"
+            startingLineNumber = "453"
+            endingLineNumber = "453"
+            landmarkName = "makeLines(Rect r,int centerOfLine, Mat img, Mat draw)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "hog/main.cpp"
+            timestampString = "486056502.453337"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "423"
+            endingLineNumber = "423"
+            landmarkName = "test_it(const Size &amp; size)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

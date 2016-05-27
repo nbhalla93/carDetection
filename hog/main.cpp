@@ -21,15 +21,23 @@
 #define POSITIVE_TRAINING_SET_PATH "/Users/nbhalla/Desktop/research/hog/hog/DATASET\\POSITIVE\\"
 #define NEGATIVE_TRAINING_SET_PATH "/Users/nbhalla/Desktop/research/hog/hog/DATASET\\NEGATIVE\\"
 #define WINDOW_NAME "WINDOW"
-#define TRAFFIC_VIDEO_FILE "/Users/nbhalla/Desktop/research/hog/video1.mp4"
+
+#define TRAFFIC_VIDEO_FILE_1 "/Users/nbhalla/Desktop/research/hog/counting1.mp4"
+#define TRAFFIC_VIDEO_FILE_2 "/Users/nbhalla/Desktop/research/hog/counting2.mp4"
+#define TRAFFIC_VIDEO_FILE_3 "/Users/nbhalla/Desktop/research/hog/detection.mp4"
+#define TRAFFIC_VIDEO_FILE_4 "/Users/nbhalla/Desktop/research/hog/nightDetection1.mp4"
+
 #define TRAINED_SVM "/Users/nbhalla/Desktop/research/hog/hog/vehicle_detector.yml"
 #define	IMAGE_SIZE Size(40, 40)
 typedef cv::Rect_<int> Rect2i;
 typedef Rect2i Rect;
-
+int global = 1;
 using namespace cv;
 using namespace cv::ml;
 using namespace std;
+int num_of_vehicles_right = 0;
+int num_of_vehicles_left = 0;
+bool isRegionRequired = false;
 
 vector<string> files_in_directory(string directory);
 
@@ -39,6 +47,7 @@ void sample_neg(const vector< Mat > & full_neg_lst, vector< Mat > & neg_lst, con
 Mat get_hogdescriptor_visu(const Mat& color_origImg, vector<float>& descriptorValues, const Size & size);
 void draw_locations(Mat & img, const vector< Rect > & locations, const Scalar & color);
 void test_it(const Size & size);
+void makeLines(Rect r,int centerOfLine, Mat img, Mat draw);
 
 int main(int argc, char** argv)
 {
@@ -353,15 +362,29 @@ void test_it(const Size & size)
     hog.setSVMDetector(hog_detector);
     
     // Open the camera.
-    video.open(TRAFFIC_VIDEO_FILE);
+    
+    switch (global) {
+        case 0 :
+            video.open(TRAFFIC_VIDEO_FILE_1);
+            break;
+        case 1 :
+            video.open(TRAFFIC_VIDEO_FILE_2);
+            break;
+        case 2 :
+            video.open(TRAFFIC_VIDEO_FILE_3);
+            break;
+        case 3:
+            video.open(TRAFFIC_VIDEO_FILE_4);
+            break;
+    }
+    
     if (!video.isOpened())
     {
         cerr << "Unable to open the device" << endl;
         exit(-1);
     }
     
-    int num_of_vehicles = 0;
-    
+
     bool end_of_process = false;
     while (!end_of_process)
     {
@@ -372,13 +395,16 @@ void test_it(const Size & size)
         draw = img.clone();
         
         // Eliminate ingoing traffic
-//        for (int pi = 0; pi < img.rows; ++pi)
-//            for (int pj = 0; pj < img.cols; ++pj)
-//                if (pj > img.cols / 2) {
-//                    img.at<Vec3b>(pi, pj)[0] = 0;
-//                    img.at<Vec3b>(pi, pj)[1] = 0;
-//                    img.at<Vec3b>(pi, pj)[2] = 0;
-//                }
+        
+        if (global != 2 && isRegionRequired) {
+        for (int pi = 0; pi < img.rows; ++pi)
+            for (int pj = 0; pj < img.cols; ++pj)
+                if (pj > img.cols * 4/ 6) {
+                    img.at<Vec3b>(pi, pj)[0] = 0;
+                    img.at<Vec3b>(pi, pj)[1] = 0;
+                    img.at<Vec3b>(pi, pj)[2] = 0;
+                }
+        }
         
         locations.clear();
         hog.detectMultiScale(img, locations);
@@ -386,25 +412,34 @@ void test_it(const Size & size)
         
         for (Rect r : locations) {
             
-            // Center point of the vehicle
             Point center(r.x + r.width / 2, r.y + r.height / 2);
-            
+
             //to draw center of rectangle
             line(draw, center,center, Scalar(255,0,0),5);
 
             
-            if (abs(center.y - img.rows * 2 / 3) == 0) {
-                ++num_of_vehicles;
-                line(draw, Point(0, img.rows * 2 / 3), Point(img.cols / 2, img.rows * 2 / 3), Scalar(0, 255, 0), 3);
-                imshow(WINDOW_NAME, draw);
-                waitKey(50);
+            switch (global) {
+                case 0 :
+                    makeLines(r,img.cols/2 - 100 , img, draw);
+                    break;
+                case 1 :
+                    makeLines(r,img.cols/2 - 100 , img, draw);
+
+                    break;
+                case 2 :
+                    break;
+                case 3:
+                    makeLines(r,img.cols/2 - 55 , img, draw);
+
+                    break;
             }
-            else
-                line(draw, Point(0, img.rows * 2 / 3), Point(img.cols / 2, img.rows * 2 / 3), Scalar(0, 0, 255), 3);
-            
         }
         
-        putText(draw, "Detected vehicles: " + to_string(num_of_vehicles), Point(50, 50), 1, 1, Scalar(0, 0, 255), 2);
+        if (global != 2) {
+            putText(draw, "Detected vehicles in left are : " + to_string(num_of_vehicles_left), Point(50, 50), 1, 1, Scalar(0, 0, 255), 2);
+            putText(draw, "Detected vehicles in right are : "+ to_string(num_of_vehicles_right), Point(200, 100), 1, 1, Scalar(0, 0, 255), 2);
+
+        }
         
         imshow(WINDOW_NAME, draw);
         key = (char)waitKey(10);
@@ -412,3 +447,31 @@ void test_it(const Size & size)
             end_of_process = true;
     }
 }
+
+void makeLines(Rect r,int centerOfLine, Mat img, Mat draw){
+    // Center point of the vehicle
+    Point center(r.x + r.width / 2, r.y + r.height / 2);
+
+    if(r.x > 0 && r.x < centerOfLine) {
+        if (abs(center.y - img.rows * 2 / 3) == 0) {
+            ++num_of_vehicles_left;
+            line(draw, Point(0, img.rows * 2 / 3), Point(centerOfLine, img.rows * 2 / 3), Scalar(0, 255, 0), 3);
+            imshow(WINDOW_NAME, draw);
+            waitKey(50);
+        }
+        else {
+            line(draw, Point(0, img.rows * 2 / 3), Point(centerOfLine, img.rows * 2 / 3), Scalar(255,0,255), 3);
+        }
+    } else if (r.x > centerOfLine && r.x < img.cols) {
+        if (abs(center.y - (img.rows * 2 / 3 + 1)) == 0) {
+            ++num_of_vehicles_right;
+            line(draw, Point(img.cols, (img.rows * 2 / 3 + 1)), Point(centerOfLine, (img.rows * 2 / 3 + 1)), Scalar(0, 255, 0), 3);
+            imshow(WINDOW_NAME, draw);
+            waitKey(50);
+        }
+        else {
+            line(draw, Point(img.cols, (img.rows * 2 / 3 + 1)), Point(centerOfLine, (img.rows * 2 / 3 + 1)), Scalar(255,255,0), 3);
+        }
+    }
+}
+
